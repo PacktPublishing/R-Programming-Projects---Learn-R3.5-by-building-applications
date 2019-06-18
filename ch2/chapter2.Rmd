@@ -1,0 +1,398 @@
+---
+title: "Chapter 2"
+output: pdf_document
+---
+This chapter will expand the ability to customize your code to data using conditional execution statements, and loops, and explores  deeper into data set exploration when the data is larger and has multiple factor variables. Linear  Regression and Analysis of Variance are covered, from the point of view of how to use them in R.   All of these concepts use R's list data type as their foundation, so we will examine lists first.  Lists were mentioned in the first chapter as the backbone of the data frame, but in this chapter their special abilities beyond the data frame are also explored.
+
+The following topics will be covered in this chapter:
+
+Conditionals, if/then/else, while, and switch
+How to subdivide a problem and reassemble the solutions using lists, lapply, and split
+How to iterate using for-loops
+String Operations using stringr: str_subset, str_match, str_split,separate
+Preparing a data set for Linear Modeling using dcast
+
+
+
+
+Prerequisites
+In addition to loading the tidyverse, which will be true for every chapter, so I'll stop mentioning it, you will also need to load the package data.table  Although data.tables are beyond the scope of this chapter, we are loading it in order to have access to the dcast.data.table function, which will still work on data frames.   In this package is the MathAchieve data set, which will be one of the guiding examples through the chapter. Use the following code
+
+library(nlme) # this is included with base R, so you should not need to install it from a CRAN mirror
+ma=MathAchieve  # to save typing and help autocomplete
+Once this is loaded, you can explore the data set.  The goal will be to determine what relationship exists between school, sex, socioeconomic status, and math achievement score.  Let's look at the data set through the three commands discussed in the last chapter, str, summarize, and plot.  First, there will be a review of all of the data, and then the breakdown by different factors.
+
+I could not find a better place to put this. The cbind function is mentioned in this chapter, It glues together arrays column-wise, and creates a grouping of columns:
+
+cbind(matrix(1:6,nrow=3),matrix(runif(3),nrow=3)
++ )
+ [,1] [,2] [,3]
+[1,] 1 4 0.3629139
+[2,] 2 5 0.3470062
+[3,] 3 6 0.3951978
+The 3x2 matrix with the numbers 1 through 6 is joined by column to a matrix of random numbers (3 rows, 1 column) to create a new object that is three rows and three columns.
+
+Conditional Execution of Code
+ In its simplest form, conditional execution means evaluating a block of code only if a condition is true.  This block is called the consequent.  An alternative block of code can execute when the condition is false, although this is optional.
+
+Use cases include reading in a file,but after checking that it exists and has non-trivial data, or performing a division but only if the denominator makes sense in your problem domain.  means evaluates a statement, and if that statement evaluates to a logical TRUE, executes the next branch of code.  If FALSE, then it evaluates the block of code after the else keyword.
+
+The Syntax for the if/else statement is. 
+
+If (condition) {
+     /* executes when condition is TRUE
+   } else {
+ /* statements that execute when condition is FALSE */
+   }
+  
+If you wish to run code based on whether a value takes on a range of values, you can use the if/else/else if form of this statement.
+
+The challenging aspect of this is to make sure that your tests return a TRUE or FALSE value.  Many tests, particularly searches,  may return failure conditions that are not equivalent to a FALSE in R, but you can avoid this confusion by making sure all functions that test a value must return TRUE or FALSE, as opposed to say, an empty string, or empty vector.   The first illustration of conditional execution will be classifying a blood pressure reading and classifying it based on Hypertension guidelines.
+
+Blood Pressure
+
+Blood pressure is measured as two numbers, systolic [the pressure in your arteries during contraction] over diastolic [between beats].   An anatomical discussion is out of scope;we will assume that the reader is familiar  what their blood pressure means. We are going to write a program to classify a patient's degree of hypertension using the recommendations are from the American College of Cardiology and the American Heart Association.  They are reproduced here from the American Heart Association.
+
+https://www.heart.org/-/media/data-import/downloadables/hypertension-guideline-highlights-flyer-ucm_497841.pdf
+
+
+Normal: Less than 120/80 mm Hg;
+Elevated: Systolic between 120-129 and diastolic less than 80;
+Stage 1: Systolic between 130-139 or diastolic between 80-89;
+Stage 2: Systolic at least 140 or diastolic at least 90 mm Hg;
+
+
+
+As always, when discussing vital statistics, there is the usual  disclaimer that only a doctor should issue medical opinion, and the reader should not use this material to diagnose a condition.
+
+The requirement is to write a function that takes two numbers, or vectors, and outputs the category of hypertension based on those two numbers.  The category can be represented either as a string, or as a factor.   We will use a an string  during the development and then convert to a factor once the categories feel right.
+
+The example will use the following data.  sp stands for systolic pressure, and dp stands for diastolic pressure.
+
+patients=data.frame(id=letters[1:5],
+                    sbp=c(125,110,120,110,140),dbp=c(75,70,80,85,90))
+As a reminder, the letters and LETTERS arrays are  bound to the letters of the alphabet when R starts up.  The patients array appears as follows:
+
+ 
+
+Patient ID	sbp (systolic pressure)	dbp (diastolic pressure)
+a	125	75
+b	110	70
+c	120	80
+d	110	85
+e	140	90
+Let's classify each patient, first using a simpler function that returns 1 for high blood pressure, 0 for low blood pressure.
+
+hbp.simple=function(sbp,dbp) {
+ ## returns 0 for normal BP,1 for high BP
+ if(sbp < 120 & dbp < 80) {
+  0
+  }  else  {
+  1
+  }
+}
+
+Discussion:
+
+Notice that the consequent and alternative clauses are single statements, so the body of the function could be written more compactly as
+
+if(sbp<120 & dbp<80) 0 else 1
+
+For more complicated functions, the long form shown in the example permits debugging print statements and other side effects to be inserted.
+
+Note the absence of the keyword then, for the consequent clause, which is the code that executes when the condition is TRUE.  This version is not vectorized.    This will return a correct result if sbp and dbp are numbers, but the result will not be interpret-able when they are vectors.   This situation will be corrected later in the section.   The execution of the condition in an if/else will always be based on single values, not vectors.
+
+Let's now expand the high blood pressure situation to cover all four ranges for the new guidelines. To help you check your work, the ranges are displayed in the image below, and we will only be concerned with blood pressure up to 180/120.  
+
+
+
+The R code for this logic is exhibited in the function high.bp:
+
+high.bp = function (sbp,dbp) {
+ if ((sbp < 120) & (dbp < 80)) {
+ return("Normal BP")
+ return(0)
+ } else if (sbp>=120 & sbp<130 & dbp<80) {
+ return("Elevated Branch")
+ } else if ((sbp>=130 & sbp<139) | (dbp>=80 & dbp<89)) {
+ return("Stage 1 Hypertension") 
+ } else if (sbp>=140 | dbp>=90) {
+ return("Stage 2 Hypertension")
+ }
+ else stop("Failed to assign a status to ",sbp," over ",dbp)
+}
+In addition to if/else, R also supports a switch statement similar to SQL's case statement.  You can learn about this in R's documentation.  
+
+The stop statement stops code execution and generates an error message.  Additional methods of stopping or warning the user will be discussed in Chapter 8 "Chapter title here".
+
+Always terminate an if/else chain with an error message that catches unexpected values.  It is better to flag unexpected values than to let them pass quietly.
+With that warning out of the way, the next step is to discuss how to apply the high.bp function to each of our patients.  There are several ways to proceed, the most obvious being to iterate over each row.
+
+Iteration using the For Loop
+To compute the blood pressure for each patient,  we would like to iterate over each row and insert the answer into a vector, then make that answer vector available as its own column in the data frame.  To build a "blank" vector, you can use the vector constructors, which are the same name as the data type you wish to put in them.
+
+result=numeric(nrow(patients)) # create a vector, filled with zeroes, with length equal to the length of the row.
+
+result=numeric(nrow(patients))
+
+The for loop performs the operation in the statement following it once for each element inside the parentheses. For each patient, indexed by i, the blood pressure status is computed, and inserted into the result vector. 
+
+for(i in 1:nrow(patients)) {
+    result[i]=high.bp(patients[i,"sbp"],patients[i,"dbp"])
+}
+> result
+[1] 1 0 1 1 1
+>names(result)=patients$id
+By assigning names to the vector of results, we can clarify which patient goes with which results.
+
+Typically it is neater to put the computed columns into the data frame, since 'result' is not just a free floating symbol, but it is to be associated with the data frame named patients.
+
+patients$hbp_status=result
+
+will add the column to the data frame, so evaluating patients now gives
+
+Patient ID	sbp (systolic pressure)	dbp (diastolic pressure)	hbp_status
+a	125	75	1
+b	110	70	0
+c	120	80	1
+d	110	85	1
+e	140	90	1
+
+
+Let's develop this one step further and write the complete status returning all four stages as possible outputs.  This will require an if/else statement with four branches, plus an additional one to catch situations that "fell through".  
+
+
+
+This section demonstrated how to build a result by starting with a blank vector and filling it by assignment using a for loop.
+
+cheer=c("hip","hip","hooray")
+for(i in 1:3) {
+   print(cheer[i])
+}
+The values to iterate over are in parentheses.  Note that this is always displayed as a vector.  There is no "TO" keyword to specify the stop point of the iteration.  The result is - 
+[1] "hip"
+[1] "hip"
+[1] "hooray"
+
+Interrupting a loop already in progress
+
+Prior to writing the prime number program, the of this section is to write a function that returns the first element of a vector that meets a condition.  This function needs to take two arguments:  a vector and a function that takes a vector and returns a logical vector, such as is.na.   If no element meets the condition, return a integer vector of length zero.   Representing failure is this way is the idiomatic way to fail a search.   It is the way grep acts when it cannot find a match.  
+
+#! function first.true
+#! input vector:
+#!
+#! @v : a vector to test
+#! @FUN.filter : a function that acts as a condition.  When applied to the vector v, it should return TRUE or FALSE
+#! @value : an optional argument. If TRUE, in returns the value of the first success.
+#! default is FALSE
+#! 
+#! details; return an atom representing the position of first element in vector
+#! satisfying the condition. If value=TRUE, return the value itself.
+#!
+#! Examples:
+#! is.odd=function(x) x %% 2 !=0
+#! first.true(c(2,4,8,19,32),is.odd) 
+#!   returns 4 - the position of the first odd number
+#! first.true(c(2,4,8,19,32),is.odd,value=TRUE)
+#!  returns 19, the fourth element of the array; the first odd number.
+
+first.true<-function(v,FUN.filter=,value=FALSE) { #see note 1
+ # iterative way
+ for (m in seq_along(v)) { #2
+ if (f(v[m])==TRUE) { #3
+ return(ifelse(value==TRUE,v[m],m))
+ }
+ }
+ # at this point, we have scanned the array and not found anything!
+ return(integer(0))
+}
+
+
+Discussion
+
+Although is not related to for loops, it's never a bad time to document your functions!  At a minimum, the documentation should contain a description of what the function does, what are the requirements for the inputs, and describe the return value.  Even better is to provide a couple of examples of the function call and its values.  The comment character followed by an exclamation mark is a signal to R's automatic documenter package, which we will see in Chapter X [title].  Might as well get used to the format early.  If you do this well, you can read the comments and understand the function without reading the code.    All of R's documentation pages are written using this format, so you may wish to imitate it.
+
+Returning from the digression, let's look at the key features of the code
+
+ using the pattern parameter=VALUE as the argument to a function makes the argument optional, and supplies a default value if one is not provided.  See the first example in the comments. 
+This is a fairly common pattern for iterating over an array in R when you wish to keep track of both the position and the value of an array element.   seq_along provides a set of indexes to match an array.  It would have been equally correct to say for (m in v), although this would have given us access only to the value of the array and not its position.  
+If the condition is true, for the item at position m, start executing the code block.  The expression  f(v[m]) is itsself a logical variable, so it would have been equivalent to write if(f(v[m]) { ... } , so you can decide for yourself which is more readable. I prefer writing it out because your eye is drawn to the bold TRUE.   It depends on your preferences and that of your users.
+ifelse is a compact form of the if/then/else that can be used directly on vectors.  The second argument is the consequence, and the third argument is the alternative.  It's great when you don't have much or any nesting of conditions.
+Return ends execution of the function and returns the argument to the caller, even if it is in the middle of the loop.  The loop will not continue.   If you are ready to break the loop but would like to do additional things in the function, use use the break keyword to prematurely end an iteration.
+Finding the first TRUE position in a logical vector can be accomplished by using the which.max function.  Which do you prefer?   The reason for using which is if you need to evaluate the FUN.filter for every element of the vector.   Our function stops computing once it finds an answer.  Many times while writing your own function, you may come across an R function that does exactly the same thing as you are doing.  Swallow your pride and use the R version ; it will save you debugging time.  Well, 99.99% of the time it should.  Sometimes though, your version might meet your needs better.  For example, it may be less general, but faster on your data provided you only feed it data it won't choke on!  For now, focus on readability over efficiency; R's functions are by definition more readable since most programmers who read your code will find the function names familiar, as contrasted with having to learn yours.  
+
+One way to end a for loop  before we get to the end of a the iterable sequence is to use the break statement.  This continues execution at the next statement after the for loop. Another is to use the return statement to return the execution to the next statement after the function that called.
+
+While Loops
+
+If you are not sure how many iterations you will make before your condition is reached, use the while loop.  The syntax is very simple: 
+
+while(condition) {expressions}
+
+As an example, given a vector of positive numbers, say costs, and a budget, create a vector that contains the first N elements of the vector such that the sum of the costs is less than the budget.  So, if the budget is 10 and the vector is c(2,3,6), the  function should return the vector [2 3]
+
+
+
+
+
+Sieve of Eratosthenes
+
+One application traditionally used with for loops is to create a table of prime numbers less than a given integer n.  This is not by any means the most optimal way to generate a table of prime numbers, but it's just for practice building loops. 
+
+Set a pointer to the number 2
+
+Starting with the vector 2:n, remove multiples of 2 until you reach the end of the array,  but not two itself.  
+
+Increase the pointer to the next non-missing number. 
+
+
+
+
+
+Alternatives to For Loops
+
+R programmers tend to use other solutions for iteration.  It's not like for loops are an evil to be avoided at all costs.  Sometimes the for loop solution is intuitive and readable.  However, in R we get repetitive things done by applying functions to vectors.  We already saw this in chapter 1.  If we wanted a list of the first 
+
+
+
+Lists
+Lists represent R's recursive data structure.  A list consists of named slots,  and slot can any data type, including another list.  You   Some common applications of lists include
+
+Since the list slot can hold any data structure, including another, it can be used to store arbitrarily nested data structures. For example, statistical model output needs to hold a variety of outputs such as model coefficients, a predictor function, and other statistical outcomes.  
+Lists can be used to build arrays that can be indexed by name as well as by number.
+Lists can hold results related results in the same "box" so that they be treated as though they are related.  Since they can be saved as a unit and reloaded with all variables kept together.
+Lists can represent tree-like structures.
+Can be used to hold vectors of unequal length, which could not be set up as a data frame.
+Creating lists of functions and applying all of them simulatenously to a set of data.
+Let's look at example of a set of height measurements taken from a group of men and women, with each set being chosen independently of the other. 
+
+# 25 men
+heights = list(men=c(67,67,67,69,69,69,
+ 71,71,72,73,73,73,
+ 74,74,75,75,76,76,
+ 76,76,76,76,77,77,
+ 84) #end of men , 
+
+#18 women
+women=c(58,58,60,61,61,
+ 62,63,65,66,66,
+ 66,66,67,68,68,
+ 68,70,72)
+) # end of women
+) #end of list
+# from the console
+> str(heights)
+List of 2
+ $ men : num [1:25] 67 67 67 69 69 69 71 71 72 73 ...
+ $ women: num [1:18] 58 58 60 61 61 62 63 65 66 66 ...
+> 
+The str(heights) statement shows how the list is structured.  It is always a good idea to run str on any new data structure.
+
+Here are more examples of lists
+
+> str(list(list(1,2,3),2,3,4))
+List of 4
+ $ :List of 3
+  ..$ : num 1
+  ..$ : num 2
+  ..$ : num 3
+ $ : num 2
+ $ : num 3
+ $ : num 4
+> a=list(name='Margaret',iq=155,2+3i))
+> str(a)
+List of 3
+ $ name: chr "Margaret"
+ $ iq : num 155
+ $ : cplx 2+3i
+
+Once created, slots can be accessed by name or position.  For the list a , the statements a$name  ,  a[[1]], or a[["name"]] will all return the character string "Margaret".  The third slot, being unnamed, must be addressed by position.
+When we discuss R's object system, we will see another way of working with objects with named slots.
+The names function permits you to access and mutate the names of your list elements
+
+example2=list(x=c(1,2,5),y=letters[1:3],z=LETTERS[5:21])
+
+Recall that the letters and LETTERS array are provided as a convenience, to make it easy to label via consecutive letters of the alphabet.
+
+> names(example2)
+[1] "x" "y" "z"
+Many times you will encounter data sets that whose columns are programmatically generated, particularly when data are being reshaped. These data sets might have names you may wish to change. The names of a list can be changed by putting the names on the left hand side of an assignment, and specifying the new values.  The following are some legal ways to change the structure of example2.
+
+> names(example2)=c("left","right","center")  # don't type the > that's just the console prompt
+
+> str(example2)
+ $ left : num [1:3] 1 2 5
+ $ right : chr [1:3] "a" "b" "c"
+ $ center: chr [1:17] "E" "F" "G" 
+
+Regression in R
+
+
+Other forms of model prediction will work in place of regression.  The general format looks like
+
+Run a model, and store the result in an R object
+
+
+
+
+
+
+Technical Requirements
+// list technologies and installations required here.
+
+// Provide Github URL for the code in the chapter (setup instructions should be on the Github page). Create a Github folder named, "chX", where X is the chapter number. For example, ch1
+
+// H1 Heading - essential theory and context
+Need to discuss what linear regression is, briefly, along with how to set data up for regression, compute the model, and make predictions.  Although the techniques are not necessarily at the forefront of machine learning, this is a framework that can be generalized.
+
+Project overview
+Description of Database
+
+This section uses the MovieLens database, a collaborative database of movie ratings by [how many] users during a period of ..  Movies were assessed a genre, and were also given numeric values between 0 to 1 to describe how well they fit various adjectives, called "tags".  The description of how these tags were defined is a fascinating story in itself.  For this exercise, we will take them as given.  As a result, the conclusions should not be taken too literally, since the dependence between the ratings and the tags is somewhat fuzzy.
+
+Objective of Exercise 
+
+The objective of the exercise is to put yourself in the position of a studio executive who is planning to launch several movies in different genres. You have data showing audience ratings of 100,000 movies.  The audiences have also rated the movies on different attributes called "tags", which are descriptive rather than performance related.  Youwould like to know if your proposed titles will be a widely regarded .  You are provided also with tag values for your own proposed movies, generated by a focus group.  Each are are on a continuous scale of 0 to 100.   
+
+The statistical tool used will be a linear regression model, that will try to predict the number of stars the movie will earn.
+
+Getting started
+// Enter Hardware/Software prerequisites and dependencies here.
+
+The Movie Lens database can be found at https://grouplens.org/datasets/movielens/.   There are databases there of several sizes. You will need to download and unzip the file to a directory, and copy this directory name into the "currdir" in the source file.
+
+https://grouplens.org/datasets/movielens/latest/
+
+We are grateful to the University of Minnesota GroupLens project,for permitting us to use their database for educational purposes. The bibliographic citation is in the references at the end of this chapter.
+
+
+
+Predicting Movie Ratings 
+Objectives:
+
+Explore and describe the data.
+Create a data frame where each movie genre type is a column, and each tag is a column
+Split movie titles into separate columns
+Split genre into columns
+Compute average rating for each movie
+Build a logistic regression model to predict probability of 4 or 5 for a movie based purely on genre (in lieu of LR, an ordinary OLS regression might be used)
+Create a linear model to predict rating for movies based on tags
+Make Predictions for a set of new movies
+As a result,  for this exercise we will assume, as we must in all predictive models, that the independent variables were not based on the prediction target variable, which is the probability of a 4 star rating or above.  We also need to assume that each observation is independent.  That the error in prediction for one movie doesn't affect other movies. 
+
+For build time, we will choose a subset of movies so that most of the code can be executed in seconds or minutes.
+
+
+
+Summary
+The if/else statement is the first example of testing a value and taking action based on whether that value met or failed a test.  Other constructions such as while, until, and switch, which are simlar to those in other languages were also briefly reviewed. 
+
+The chapter showed how to use the  lapply  function to perform the same operation on each element of a list.   The chapter also discussed iteration using for loops as well as functional methods of iteration such as lapply/split, which splits a list into groups and applies the same function to each group, via map.
+
+glm and lm are the workhorse regression functions for R.  We demonstrated using data reshaping, separating, and using string operators, how one such data set could be brought into form.  We also showed how the design matrix function performs a similar task to convert categorical columns into numerical binary columns.
+
+Questions
+Try various interesting subsets.  Try comparing the performance of the same model under LR and OLS. Is there a bias against older movies in this database?  Is year of the movie's production a factor in predicting the number of stars?
+
+Further Reading
+// Add additional references to useful third-party resources, or other information that might help explain a particular concept in further detail.
