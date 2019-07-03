@@ -2,50 +2,62 @@
 title: "Chapter 2"
 output: pdf_document
 ---
-This chapter will expand the ability to customize your code to data using conditional execution statements, and loops, and explores  deeper into data set exploration when the data is larger and has multiple factor variables. Linear  Regression and Analysis of Variance are covered, from the point of view of how to use them in R.   All of these concepts use R's list data type as their foundation, so we will examine lists first.  Lists were mentioned in the first chapter as the backbone of the data frame, but in this chapter their special abilities beyond the data frame are also explored.
+# Introduction
+This chapter starts with conditional execution statements, which are an essential part of programming. The
+central new idea in this chapter are lists. So far, The only data structure covered so far has been the data
+frame, which is ubiquitous, and of course, a vector. As you may recall, data frames are lists, with each
+column a single data type and the same length. Lists provide a more general means of storing data. Anything
+can be stored in a list, including another list.  Once navigating lists is complete, we can introduce our first statistical procedures, whose outputs are lists.   Basic functionality of read_csv from the readr packge will also be demonstrated.
 
 The following topics will be covered in this chapter:
 
-Conditionals, if/then/else, while, and switch
-How to subdivide a problem and reassemble the solutions using lists, lapply, and split
-How to iterate using for-loops
-String Operations using stringr: str_subset, str_match, str_split,separate
-Preparing a data set for Linear Modeling using dcast
+* Conditionals, if/else
+* Iteration using for-loops
+* How to subdivide a problem and reassemble the solutions using lists, lapply, and split
+* String Operations using stringr: str_subset, str_match, str_split,separate
+* Review of formulas
+* Regression models
 
 
 
+# Prerequisites
+n addition to loading the tidyverse, you will also need to load the package data.table  Although data.tables are beyond the scope of this chapter, we are loading it in order to have access to the dcast.data.table function, which will still work on data frames.   In this package is the MathAchieve data set, which will be one of the guiding examples through the chapter. Use the following code
 
-Prerequisites
-In addition to loading the tidyverse, which will be true for every chapter, so I'll stop mentioning it, you will also need to load the package data.table  Although data.tables are beyond the scope of this chapter, we are loading it in order to have access to the dcast.data.table function, which will still work on data frames.   In this package is the MathAchieve data set, which will be one of the guiding examples through the chapter. Use the following code
-
+```{r MathAchieve Data Set}
+library(tidyverse)
 library(nlme) # this is included with base R, so you should not need to install it from a CRAN mirror
 ma=MathAchieve  # to save typing and help autocomplete
-Once this is loaded, you can explore the data set.  The goal will be to determine what relationship exists between school, sex, socioeconomic status, and math achievement score.  Let's look at the data set through the three commands discussed in the last chapter, str, summarize, and plot.  First, there will be a review of all of the data, and then the breakdown by different factors.
+```
 
-I could not find a better place to put this. The cbind function is mentioned in this chapter, It glues together arrays column-wise, and creates a grouping of columns:
-
-cbind(matrix(1:6,nrow=3),matrix(runif(3),nrow=3)
-+ )
- [,1] [,2] [,3]
-[1,] 1 4 0.3629139
-[2,] 2 5 0.3470062
-[3,] 3 6 0.3951978
-The 3x2 matrix with the numbers 1 through 6 is joined by column to a matrix of random numbers (3 rows, 1 column) to create a new object that is three rows and three columns.
-
-Conditional Execution of Code
+# Conditional Execution of Code
  In its simplest form, conditional execution means evaluating a block of code only if a condition is true.  This block is called the consequent.  An alternative block of code can execute when the condition is false, although this is optional.
 
-Use cases include reading in a file,but after checking that it exists and has non-trivial data, or performing a division but only if the denominator makes sense in your problem domain.  means evaluates a statement, and if that statement evaluates to a logical TRUE, executes the next branch of code.  If FALSE, then it evaluates the block of code after the else keyword.
+Use cases include reading in a file,but after checking that it exists and has non-trivial data,
+```{r}
+is_csv<-
+find_my_file = function (nm) {
+  if (exists(nm) && is_csv(nm)) read_csv(nm)
+   else file.choose()
+}
+find_file("RBook\")
+```
+The double-ampersand form of the and operator is used here.  This is typically the case in `if` conditions, where only a single value is being computed. 
+
+
+or performing a division but only if the denominator makes sense in your problem domain.  means evaluates a statement, and if that statement evaluates to a logical TRUE, executes the next branch of code.  If FALSE, then it evaluates the block of code after the else keyword.
 
 The Syntax for the if/else statement is. 
-
+```{r}
+function() {
 If (condition) {
      /* executes when condition is TRUE
    } else {
  /* statements that execute when condition is FALSE */
    }
+}
+```
   
-If you wish to run code based on whether a value takes on a range of values, you can use the if/else/else if form of this statement.
+If you  you can use the if/else/else if form of this statement.
 
 The challenging aspect of this is to make sure that your tests return a TRUE or FALSE value.  Many tests, particularly searches,  may return failure conditions that are not equivalent to a FALSE in R, but you can avoid this confusion by making sure all functions that test a value must return TRUE or FALSE, as opposed to say, an empty string, or empty vector.   The first illustration of conditional execution will be classifying a blood pressure reading and classifying it based on Hypertension guidelines.
 

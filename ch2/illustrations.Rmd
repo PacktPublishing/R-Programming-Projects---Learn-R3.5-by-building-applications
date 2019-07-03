@@ -1,0 +1,29 @@
+---
+title: "Illustrations"
+output: html_document
+---
+Here is an example of the complex numbers -3+4i and 4+3i. 
+```{r warning=FALSE}
+plot.complex.point<-function(z,lab,m=1) {
+  
+   plot(z,xlim=c(min(m*Re(z),1-m),max(m*Re(z),1-m))
+         ,ylim=c(min(m*Im(z),1-m),max(m*Im(z),1-m)),asp=1,pch=16,axes=FALSE,xlab='',ylab='')
+  
+  # axes
+   arrows(x0=0,y0=0,x1=max(m*Re(z),1-m),y1=0)
+   arrows(x0=0,y0=0,x1=min(m*Re(z),1-m),y1=0)
+   
+   arrows(x0=0,y0=0,y1=max(m*Im(z),1-m),x1=0)
+   arrows(x0=0,y0=0,y1=min(m*Im(z),1-m),x1=0)
+
+   segments(x0=Re(z),y0=0,x1=Re(z),y1=Im(z),lty=2)
+   segments(y0=Im(z),x0=0,x1=Re(z),y1=Im(z),lty=2)
+   
+   text(x=Re(z),y=Im(z),lab,pos=3)
+   
+   text(x=m*max(Re(z)),y=0,"Re(z)",pos=1)
+   text(x=0,y=max(m*Im(z)),"Im(z)",pos=4)
+}
+z=complex(2,real=c(-3,4,1),imaginary = c(4,3,-sqrt(24)))
+plot.complex.point(z,m=2,lab=round(z,2))
+```

@@ -1,0 +1,57 @@
+---
+title: "Chapter 2 Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Lets begin by setting up our region.  There are numerous ways to define it.  We also need a diagram to demonstrate some of our concepts.
+# The diagram
+The diagram needs to support the following: Plot (i,j) where j is between -3 and 3 but instead of plotting a pixel, we need to plot a rectangle and keep its label.  
+```{r}
+
+ppix<-function(i,j,...) rect(i,j,i+1,j+1,...)
+tk<-function(i,j) text(2*i+1,2*j+1,coords.text(i,j))
+
+coords.text<-function(i,j) {
+  if (sign(i)==0 && sign(j)==0) res="(i,j)"
+  else if (sign(i)==1 && sign(j)==0) res=sprintf("(i+%d,j)",abs(i))
+  else if (sign(i)==1 && sign(j)==1) res=sprintf("(i+%d,j+%d)",abs(i),abs(j))
+  else if (sign(i)==0 && sign(j)==1) res=sprintf("(i,j+%d)",abs(j))
+  else if (sign(i)==-1 && sign(j)==1) res=sprintf("(i-%d,j+%d)",abs(i),abs(j))
+  else if (sign(i)==-1 && sign(j)==0) res=sprintf("(i-%d,j)",abs(i))
+  else if (sign(i)==-1 && sign(j)==-1) res=sprintf("(i-%d,j-%d)",abs(i),abs(j))
+  else if (sign(i)==0 && sign(j)==-1) res=sprintf("(i,j-%d)",abs(j))
+  else if (sign(i)==1 && sign(j)==-1)  res=sprintf("(i+%d,j-%d)",abs(i),abs(j))
+  else {}
+  return(res)
+}
+
+setup.grid<-function(w,...) {
+  w=abs(w)
+  plot(NULL,xlim=c(-w , w),ylim=c(-w,w),asp=1,axes=FALSE,pch=0,ylab='',xlab='',...)
+for(i in -5:5)
+{ abline(v=2*i,lty=2)
+  abline(h=2*i,lty=2)
+}
+}
+
+label.laplace<-function(){
+  for(x in (-1:1)) {y=0;tk(x,y)}
+  for(y in c(-1,1)) {x=0; tk(x,y)}
+}
+```
+Now with the graphics elements in place, we can make some illustrations.
+```{r}
+diagram.1<-function() {
+setup.grid(4)
+label.laplace()
+rect(-7.5,-5.5,7.5,-2,col=rgb(1,1,1),lty=2,border=NA)
+abline(h=-2, lty=2)
+abline(h=-4, lty=2)
+text(1,-2,"The Temperature of each tile will be the average",cex=1,pos=1)
+text(1,-2.5,"of its non-diagonal neighbors",cex=1,pos=1)
+}
+diagram.1()
+```
